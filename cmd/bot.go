@@ -1,7 +1,13 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"net/url"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/iqlusioninc/relayer/relayer"
@@ -39,7 +45,9 @@ func initChainsCmd() *cobra.Command {
 					configChange = true
 				}
 				if !bal {
-
+					if err := requestFaucet(c, keyName); err != nil {
+						fmt.Println("request faucet error: " + err.Error())
+					}
 				}
 				if !lite {
 
@@ -57,6 +65,47 @@ func initChainsCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func requestFaucet(chain *relayer.Chain, keyName string) error {
+	done := chain.UseSDKContext()
+	defer done()
+
+	u, err := url.Parse(chain.RPCAddr)
+	if err != nil {
+		return err
+	}
+
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return err
+	}
+
+	urlString := fmt.Sprintf("%s://%s:%d", u.Scheme, host, 8000)
+
+	info, err := chain.Keybase.Key(keyName)
+	if err != nil {
+		return err
+	}
+
+	body, err := json.Marshal(relayer.FaucetRequest{Address: info.GetAddress().String(), ChainID: chain.ChainID})
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(respBody))
+	return nil
 }
 
 func initKey(chain *relayer.Chain, keyName, mnem string) (err error) {
