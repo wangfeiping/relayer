@@ -68,6 +68,7 @@ func init() {
 
 	// Register subcommands
 	rootCmd.AddCommand(
+		botCmd(),
 		configCmd(),
 		chainsCmd(),
 		pathsCmd(),
