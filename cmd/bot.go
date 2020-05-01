@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/iqlusioninc/relayer/relayer"
@@ -27,14 +28,15 @@ func botCmd() *cobra.Command {
 
 func initChainsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "init [keyName] [mnemonic]",
+		Use:     "init [chainID] [keyName] [mnemonic]",
 		Aliases: []string{"auto"},
 		Short:   "auto init all chains",
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("running cmd bot...")
-			keyName := args[0]
-			mnem := args[1]
+			chianID := args[0]
+			keyName := args[1]
+			mnem := args[2]
 			configChange := false
 			for i, c := range config.Chains {
 				lite, key, path, bal := chainCheck(i, c)
@@ -55,6 +57,19 @@ func initChainsCmd() *cobra.Command {
 					}
 				}
 				if !path {
+					srcChain, err := config.Chains.Get(chianID)
+					if err == nil {
+						pathName, err := pathGen(srcChain, c)
+						if err != nil {
+							fmt.Println("gen path error: " + err.Error())
+							return err
+						}
+						configChange = true
+						fmt.Println("gen path: " + pathName)
+						txLink(pathName)
+					} else {
+						fmt.Println("get src chain error: " + err.Error())
+					}
 
 				}
 				chainCheck(i, c)
@@ -67,6 +82,261 @@ func initChainsCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func txLink(path string) error {
+	c, src, dst, err := config.ChainsFromPath(path)
+	if err != nil {
+		return err
+	}
+
+	// to, err := getTimeout(cmd)
+	to, err := time.ParseDuration("30s")
+	if err != nil {
+		return err
+	}
+
+	if err = c[src].CreateClients(c[dst]); err != nil {
+		return err
+	}
+
+	if err = c[src].CreateConnection(c[dst], to); err != nil {
+		return err
+	}
+
+	return c[src].CreateChannel(c[dst], true, to)
+}
+
+func pathGen(srcChain, dstChain *relayer.Chain) (string, error) {
+	// src, srcPort, dst, dstPort := args[0], args[1], args[2], args[3]
+	src, srcPort, dst, dstPort := srcChain.ChainID, "transfer",
+		dstChain.ChainID, "transfer"
+	path := &relayer.Path{
+		Src: &relayer.PathEnd{
+			ChainID: src,
+			PortID:  srcPort,
+		},
+		Dst: &relayer.PathEnd{
+			ChainID: dst,
+			PortID:  dstPort,
+		},
+		Strategy: &relayer.StrategyCfg{
+			Type: "naive",
+		},
+	}
+	// c, err := config.Chains.Gets(src, dst)
+	// if err != nil {
+	// 	return "", fmt.Errorf("chains need to be configured before paths to them can be added: %w", err)
+	// }
+
+	// unordered, err := cmd.Flags().GetBool(flagOrder)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// if unordered {
+	// 	path.Src.Order = "UNORDERED"
+	// 	path.Dst.Order = "UNORDERED"
+	// } else {
+	// 	path.Src.Order = "ORDERED"
+	// 	path.Dst.Order = "ORDERED"
+	// }
+	path.Src.Order = "ORDERED"
+	path.Dst.Order = "ORDERED"
+
+	// force, err := cmd.Flags().GetBool(flagForce)
+	// if err != nil {
+	// 	return err
+	// }
+	force := true
+
+	pathName := src + "2" + dst
+
+	if force {
+		path.Dst.ClientID = relayer.RandLowerCaseLetterString(10)
+		path.Src.ClientID = relayer.RandLowerCaseLetterString(10)
+		path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+		path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+		path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+		path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+		if err := config.Paths.AddForce(pathName, path); err != nil {
+			return "", err
+		}
+	}
+	return pathName, nil
+
+	// srcClients, err := c[src].QueryClients(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, c := range srcClients {
+	// 	// TODO: support other client types through a switch here as they become available
+	// 	clnt, ok := c.(tmclient.ClientState)
+	// 	if ok && clnt.LastHeader.Commit != nil && clnt.LastHeader.Header != nil {
+	// 		if clnt.GetChainID() == dst && !clnt.IsFrozen() {
+	// 			path.Src.ClientID = c.GetID()
+	// 		}
+	// 	}
+	// }
+
+	// dstClients, err := c[dst].QueryClients(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, c := range dstClients {
+	// 	// TODO: support other client types through a switch here as they become available
+	// 	clnt, ok := c.(tmclient.ClientState)
+	// 	if ok && clnt.LastHeader.Commit != nil && clnt.LastHeader.Header != nil {
+	// 		if c.GetChainID() == src && !c.IsFrozen() {
+	// 			path.Dst.ClientID = c.GetID()
+	// 		}
+	// 	}
+	// }
+
+	// switch {
+	// case path.Src.ClientID == "" && path.Dst.ClientID == "":
+	// 	path.Src.ClientID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ClientID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// case path.Src.ClientID == "" && path.Dst.ClientID != "":
+	// 	path.Src.ClientID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// case path.Dst.ClientID == "" && path.Src.ClientID != "":
+	// 	path.Dst.ClientID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// }
+
+	// srcConns, err := c[src].QueryConnections(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var srcCon connTypes.IdentifiedConnectionEnd
+	// for _, c := range srcConns {
+	// 	if c.Connection.ClientID == path.Src.ClientID {
+	// 		srcCon = c
+	// 		path.Src.ConnectionID = c.Identifier
+	// 	}
+	// }
+
+	// dstConns, err := c[dst].QueryConnections(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var dstCon connTypes.IdentifiedConnectionEnd
+	// for _, c := range dstConns {
+	// 	if c.Connection.ClientID == path.Dst.ClientID {
+	// 		dstCon = c
+	// 		path.Dst.ConnectionID = c.Identifier
+	// 	}
+	// }
+
+	// switch {
+	// case path.Src.ConnectionID != "" && path.Dst.ConnectionID != "":
+	// 	// If we have identified a connection, make sure that each end is the
+	// 	// other's counterparty and that the connection is open. In the failure case
+	// 	// we should generate a new connection identifier
+	// 	dstCpForSrc := srcCon.Connection.Counterparty.ConnectionID == dstCon.Identifier
+	// 	srcCpForDst := dstCon.Connection.Counterparty.ConnectionID == srcCon.Identifier
+	// 	srcOpen := srcCon.Connection.GetState().String() == "OPEN"
+	// 	dstOpen := dstCon.Connection.GetState().String() == "OPEN"
+	// 	if !(dstCpForSrc && srcCpForDst && srcOpen && dstOpen) {
+	// 		path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 		path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 		path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 		path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 		if err = config.Paths.Add(args[4], path); err != nil {
+	// 			return err
+	// 		}
+	// 		return overWriteConfig(cmd, config)
+	// 	}
+	// default:
+	// 	path.Src.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ConnectionID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// }
+
+	// srcChans, err := c[src].QueryChannels(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var srcChan chanTypes.IdentifiedChannel
+	// for _, c := range srcChans {
+	// 	if c.Channel.ConnectionHops[0] == path.Src.ConnectionID {
+	// 		srcChan = c
+	// 		path.Src.ChannelID = c.ChannelIdentifier
+	// 	}
+	// }
+
+	// dstChans, err := c[dst].QueryChannels(1, 1000)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// var dstChan chanTypes.IdentifiedChannel
+	// for _, c := range dstChans {
+	// 	if c.Channel.ConnectionHops[0] == path.Dst.ConnectionID {
+	// 		dstChan = c
+	// 		path.Dst.ChannelID = c.ChannelIdentifier
+	// 	}
+	// }
+
+	// switch {
+	// case path.Src.ChannelID != "" && path.Dst.ChannelID != "":
+	// 	dstCpForSrc := srcChan.Channel.Counterparty.ChannelID == dstChan.ChannelIdentifier
+	// 	srcCpForDst := dstChan.Channel.Counterparty.ChannelID == srcChan.ChannelIdentifier
+	// 	srcOpen := srcChan.Channel.GetState().String() == "OPEN"
+	// 	dstOpen := dstChan.Channel.GetState().String() == "OPEN"
+	// 	srcPort := srcChan.PortIdentifier == path.Src.PortID
+	// 	dstPort := dstChan.PortIdentifier == path.Dst.PortID
+	// 	srcOrder := srcChan.Channel.Ordering.String() == path.Src.Order
+	// 	dstOrder := dstChan.Channel.Ordering.String() == path.Dst.Order
+	// 	if !(dstCpForSrc && srcCpForDst && srcOpen && dstOpen && srcPort && dstPort && srcOrder && dstOrder) {
+	// 		path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 		path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	}
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// default:
+	// 	path.Src.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	path.Dst.ChannelID = relayer.RandLowerCaseLetterString(10)
+	// 	if err = config.Paths.Add(args[4], path); err != nil {
+	// 		return err
+	// 	}
+	// 	return overWriteConfig(cmd, config)
+	// }
 }
 
 func liteInit(chain *relayer.Chain, keyName string) error {
