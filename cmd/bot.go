@@ -45,12 +45,14 @@ func initChainsCmd() *cobra.Command {
 					configChange = true
 				}
 				if !bal {
-					if err := requestFaucet(c, keyName); err != nil {
+					if err := testnetRequest(c, keyName); err != nil {
 						fmt.Println("request faucet error: " + err.Error())
 					}
 				}
 				if !lite {
-
+					if err := liteInit(c, keyName); err != nil {
+						fmt.Println("lite init error: " + err.Error())
+					}
 				}
 				if !path {
 
@@ -67,7 +69,65 @@ func initChainsCmd() *cobra.Command {
 	return cmd
 }
 
-func requestFaucet(chain *relayer.Chain, keyName string) error {
+func liteInit(chain *relayer.Chain, keyName string) error {
+	db, df, err := chain.NewLiteDB()
+	if err != nil {
+		return err
+	}
+	defer df()
+
+	// url, err := cmd.Flags().GetString(flagURL)
+	// if err != nil {
+	// 	return err
+	// }
+	// force, err := cmd.Flags().GetBool(flagForce)
+	// if err != nil {
+	// 	return err
+	// }
+	force := true
+
+	// height, err := cmd.Flags().GetInt64(flags.FlagHeight)
+	// if err != nil {
+	// 	return err
+	// }
+	// hash, err := cmd.Flags().GetBytesHex(flagHash)
+	// if err != nil {
+	// 	return err
+	// }
+
+	switch {
+	case force: // force initialization from trusted node
+		_, err = chain.TrustNodeInitClient(db)
+		if err != nil {
+			return err
+		}
+	// case height > 0 && len(hash) > 0: // height and hash are given
+	// 	_, err = chain.InitLiteClient(db, chain.TrustOptions(height, hash))
+	// 	if err != nil {
+	// 		return wrapInitFailed(err)
+	// 	}
+	// case len(url) > 0: // URL is given, query trust options
+	// 	_, err := neturl.Parse(url)
+	// 	if err != nil {
+	// 		return wrapIncorrectURL(err)
+	// 	}
+
+	// 	to, err := queryTrustOptions(url)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// 	_, err = chain.InitLiteClient(db, to)
+	// 	if err != nil {
+	// 		return wrapInitFailed(err)
+	// 	}
+	default: // return error
+		return errInitWrongFlags
+	}
+	return nil
+}
+
+func testnetRequest(chain *relayer.Chain, keyName string) error {
 	done := chain.UseSDKContext()
 	defer done()
 
