@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -22,7 +23,32 @@ func botCmd() *cobra.Command {
 		Short:   "auto running"}
 
 	cmd.AddCommand(initChainsCmd())
+	cmd.AddCommand(genKeysCmd())
+	return cmd
+}
 
+func genKeysCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "genKeys [keyPrefix] [keyNumber]",
+		Aliases: []string{"gk"},
+		Short:   "gen 100keys for all chains",
+		Args:    cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("bot genKeys...")
+			keyPrefix := args[0]
+			keyNum, err := strconv.ParseInt(args[1], 10, 64)
+			if err != nil {
+				fmt.Println("bot genKeys error: " + err.Error())
+				return err
+			}
+			for _, c := range config.Chains {
+				for i := int64(0); i < keyNum; i++ {
+
+					genKey(fmt.Sprintf("%s_%d", keyPrefix, i), c)
+				}
+			}
+			return nil
+		}}
 	return cmd
 }
 
@@ -33,7 +59,7 @@ func initChainsCmd() *cobra.Command {
 		Short:   "auto init all chains",
 		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("running cmd bot...")
+			fmt.Println("bot init...")
 			chianID := args[0]
 			keyName := args[1]
 			mnem := args[2]
@@ -82,6 +108,31 @@ func initChainsCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func genKey(keyName string, chain *relayer.Chain) error {
+	// fmt.Printf("key: %s; %s\n", chain.ChainID, keyName)
+	// return nil
+	done := chain.UseSDKContext()
+	defer done()
+
+	if chain.KeyExists(keyName) {
+		return errKeyExists(keyName)
+	}
+
+	mnemonic, err := relayer.CreateMnemonic()
+	if err != nil {
+		return err
+	}
+
+	info, err := chain.Keybase.NewAccount(keyName, mnemonic, "", hd.CreateHDPath(118, 0, 0).String(), hd.Secp256k1)
+	if err != nil {
+		return err
+	}
+
+	ko := keyOutput{Mnemonic: mnemonic, Address: info.GetAddress().String()}
+
+	return chain.Print(ko, false, false)
 }
 
 func txLink(path string) error {
