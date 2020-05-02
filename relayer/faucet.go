@@ -96,7 +96,7 @@ func (src *Chain) faucetSend(fromAddr, toAddr sdk.AccAddress, amount sdk.Coin) e
 }
 
 func (src *Chain) checkAddress(addr string) (time.Duration, error) {
-	faucetTimeout := 5 * time.Minute
+	faucetTimeout := 90 * time.Minute
 	if val, ok := src.faucetAddrs[addr]; ok {
 		sinceLastRequest := time.Since(val)
 		if faucetTimeout > sinceLastRequest {
