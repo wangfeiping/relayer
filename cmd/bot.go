@@ -117,7 +117,7 @@ func genKey(keyName string, chain *relayer.Chain) error {
 	defer done()
 
 	if chain.KeyExists(keyName) {
-		return errKeyExists(keyName)
+		return nil //errKeyExists(keyName)
 	}
 
 	mnemonic, err := relayer.CreateMnemonic()
