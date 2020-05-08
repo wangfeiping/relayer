@@ -61,7 +61,11 @@ func startChainsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			fmt.Println("bot running...")
 			path := args[0]
-			sec := strconv.ParseInt(args[1], 10, 64)
+			sec, err := strconv.ParseInt(args[1], 10, 64)
+			if err != nil {
+				fmt.Println("parse sec error: " + err.Error())
+				return
+			}
 			t := time.NewTicker(time.Duration(sec) * time.Second)
 
 			pth, err := config.Paths.Get(path)
@@ -92,6 +96,7 @@ func startChainsCmd() *cobra.Command {
 				}
 			}()
 
+			done := func() { fmt.Println("bye") }
 			trapSignal(done)
 			return nil
 		},
@@ -102,7 +107,7 @@ func startChainsCmd() *cobra.Command {
 
 func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
 	for _, c := range chains {
-		err = checking(c, pth)
+		err := checking(c, pth)
 
 		if err != nil && c.ChainID == "gameofzoneshub-1a" {
 			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
