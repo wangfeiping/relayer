@@ -110,15 +110,15 @@ func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
 		err := checking(c, pth)
 
 		if err != nil && c.ChainID == "gameofzoneshub-1a" {
-			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-				c.ChainID, path, pth.Dst.ClientID, err)
-			c.RPCAddr = "http://34.83.0.237:26657"
+			fmt.Println("c.ChainID: " + c.ChainID)
+			c.RPCAddr = "http://34.83.218.4:26657"
 			reValidateConfig(c)
 			err = checking(c, pth)
 		}
 		if err != nil && c.ChainID == "gameofzoneshub-1a" {
-			fmt.Println("c.ChainID: " + c.ChainID)
-			c.RPCAddr = "http://34.83.218.4:26657"
+			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+				c.ChainID, path, pth.Dst.ClientID, err)
+			c.RPCAddr = "http://34.83.0.237:26657"
 			reValidateConfig(c)
 			err = checking(c, pth)
 		}
