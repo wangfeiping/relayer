@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/iqlusioninc/relayer/relayer"
 	"github.com/spf13/cobra"
 )
@@ -81,12 +82,14 @@ func startChainsCmd() *cobra.Command {
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
 
 			go func() {
-				doCheck(chains, pth, path)
+				srcChain := chains[src]
+				dstChain := chains[dst]
+				doCheck(srcChain, dstChain, pth, path)
 				for {
 					select {
 					case <-t.C:
 						{
-							doCheck(chains, pth, path)
+							doCheck(srcChain, dstChain, pth, path)
 						}
 					default:
 						{
@@ -105,33 +108,83 @@ func startChainsCmd() *cobra.Command {
 	return cmd
 }
 
-func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
-	for _, c := range chains {
-		err := checking(c, pth)
+func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
+	err := checking(src, pth)
+	if err != nil {
+		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+			src.ChainID, path, pth.Dst.ClientID, err)
+	}
+	chainCheck(src)
 
-		if err != nil && c.ChainID == "gameofzoneshub-1a" {
-			fmt.Println("c.ChainID: " + c.ChainID)
-			c.RPCAddr = "http://34.83.218.4:26657"
-			reValidateConfig(c)
-			err = checking(c, pth)
-		}
-		if err != nil && c.ChainID == "gameofzoneshub-1a" {
-			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-				c.ChainID, path, pth.Dst.ClientID, err)
-			c.RPCAddr = "http://34.83.0.237:26657"
-			reValidateConfig(c)
-			err = checking(c, pth)
-		}
-		if err != nil && c.ChainID == "gameofzoneshub-1a" {
-			fmt.Println("c.ChainID: " + c.ChainID)
-			c.RPCAddr = "http://35.233.155.199:26657"
-			reValidateConfig(c)
-			err = checking(c, pth)
-		}
+	err = checking(dst, pth)
+	if err != nil {
+		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://34.83.218.4:26657"
+		reValidateConfig(dst)
+		err = checking(dst, pth)
+	}
+	if err != nil {
+		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://34.83.0.237:26657"
+		reValidateConfig(dst)
+		err = checking(dst, pth)
+	}
+	if err != nil {
+		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://35.233.155.199:26657"
+		reValidateConfig(dst)
+		err = checking(dst, pth)
+	}
+	chainCheck(dst)
 
-		chainCheck(c)
+	err = updateClient(src, dst, pth.Src.ClientID)
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
+		dst.RPCAddr = "http://34.83.218.4:26657"
+		reValidateConfig(dst)
+		err = updateClient(src, dst, pth.Src.ClientID)
+	}
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
+		dst.RPCAddr = "http://34.83.0.237:26657"
+		reValidateConfig(dst)
+		err = updateClient(src, dst, pth.Src.ClientID)
+	}
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
+		dst.RPCAddr = "http://35.233.155.199:26657"
+		reValidateConfig(dst)
+		err = updateClient(src, dst, pth.Src.ClientID)
 	}
 
+	err = updateClient(dst, src, pth.Dst.ClientID)
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://34.83.218.4:26657"
+		reValidateConfig(dst)
+		err = updateClient(dst, src, pth.Dst.ClientID)
+	}
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://34.83.0.237:26657"
+		reValidateConfig(dst)
+		err = updateClient(dst, src, pth.Dst.ClientID)
+	}
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://35.233.155.199:26657"
+		reValidateConfig(dst)
+		err = updateClient(dst, src, pth.Dst.ClientID)
+	}
 	var timer time.Time
 	timer = time.Now()
 	fmt.Printf("time in utc zone: %s\n", timer.UTC().String())
@@ -153,7 +206,7 @@ func reValidateConfig(c *relayer.Chain) error {
 }
 
 func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
-	fmt.Printf("ChainID: %s; ClientID: %s; RPC: %s\n",
+	fmt.Printf("checking ChainID: %s; ClientID: %s; RPC: %s\n",
 		c.ChainID, pth.Src.ClientID, c.RPCAddr)
 	if c.ChainID != "gameofzoneshub-1a" {
 		if err = testnetRequest(c, c.Key); err != nil {
@@ -166,7 +219,24 @@ func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
 		return
 	}
 	// err = txLink(path)
+
+	fmt.Printf("checked ChainID: %s; ClientID: %s; RPC: %s\n",
+		c.ChainID, pth.Src.ClientID, c.RPCAddr)
 	return
+}
+
+func updateClient(src, dst *relayer.Chain, clientID string) error {
+	var err error
+	if err = src.AddPath(clientID, dcon, dcha, dpor, dord); err != nil {
+		return err
+	}
+
+	dstHeader, err := dst.UpdateLiteWithHeader()
+	if err != nil {
+		return err
+	}
+
+	return sendAndPrint([]sdk.Msg{src.PathEnd.UpdateClient(dstHeader, src.MustGetAddress())}, src, nil)
 }
 
 func genKey(keyName string, chain *relayer.Chain) error {
