@@ -19,10 +19,10 @@ import (
 func botCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "bot",
-		Aliases: []string{"auto"},
+		Aliases: []string{"b"},
 		Short:   "auto running"}
 
-	cmd.AddCommand(initChainsCmd())
+	cmd.AddCommand(startChainsCmd())
 	cmd.AddCommand(genKeysCmd())
 	return cmd
 }
@@ -52,53 +52,34 @@ func genKeysCmd() *cobra.Command {
 	return cmd
 }
 
-func initChainsCmd() *cobra.Command {
+func startChainsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "init [chainID] [keyName] [mnemonic]",
+		Use:     "start",
 		Aliases: []string{"auto"},
-		Short:   "auto init all chains",
-		Args:    cobra.ExactArgs(3),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("bot init...")
-			chianID := args[0]
-			keyName := args[1]
-			mnem := args[2]
+		Short:   "auto check path",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			fmt.Println("bot running...")
+			path := args[0]
 			configChange := false
-			for i, c := range config.Chains {
-				lite, key, path, bal := chainCheck(i, c)
-				if !key {
-					if err := initKey(c, keyName, mnem); err != nil {
-						return err
-					}
-					configChange = true
+			pth, err := config.Paths.Get(path)
+			if err != nil {
+				fmt.Println("check path error: " + err.Error())
+				return
+			}
+			chains, src, dst, err := config.ChainsFromPath(path)
+			if err != nil {
+				fmt.Println("check chains of path error: " + err.Error())
+				return
+			}
+			fmt.Printf("src: %s; dst: %s\n", src, dst)
+			for _, c := range chains {
+				err = doCheck(c, pth)
+				if err != nil && c.ChainID == "gameofzoneshub-1a" {
+					fmt.Println("c.ChainID: " + c.ChainID)
 				}
-				if !bal {
-					if err := testnetRequest(c, keyName); err != nil {
-						fmt.Println("request faucet error: " + err.Error())
-					}
-				}
-				if !lite {
-					if err := liteInit(c, keyName); err != nil {
-						fmt.Println("lite init error: " + err.Error())
-					}
-				}
-				if !path {
-					srcChain, err := config.Chains.Get(chianID)
-					if err == nil {
-						pathName, err := pathGen(srcChain, c)
-						if err != nil {
-							fmt.Println("gen path error: " + err.Error())
-							return err
-						}
-						configChange = true
-						fmt.Println("gen path: " + pathName)
-						txLink(pathName)
-					} else {
-						fmt.Println("get src chain error: " + err.Error())
-					}
 
-				}
-				chainCheck(i, c)
+				chainCheck(c)
 			}
 			if configChange {
 				return overWriteConfig(cmd, config)
@@ -108,6 +89,21 @@ func initChainsCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func doCheck(c *relayer.Chain, pth *relayer.Path) (err error) {
+	fmt.Printf("ChainID: %s; ClientID: %s;\n",
+		c.ChainID, pth.Src.ClientID)
+	if err = testnetRequest(c, c.Key); err != nil {
+		fmt.Println("request faucet error: " + err.Error())
+		return
+	}
+	if err = liteInit(c, c.Key); err != nil {
+		fmt.Println("lite init error: " + err.Error())
+		return
+	}
+	// err = txLink(path)
+	return
 }
 
 func genKey(keyName string, chain *relayer.Chain) error {
@@ -526,7 +522,7 @@ func initKey(chain *relayer.Chain, keyName, mnem string) (err error) {
 	return
 }
 
-func chainCheck(i int, c *relayer.Chain) (lite, key, path, bal bool) {
+func chainCheck(c *relayer.Chain) (lite, key, path, bal bool) {
 	_, err := c.GetAddress()
 	if err == nil {
 		key = true
@@ -547,8 +543,8 @@ func chainCheck(i int, c *relayer.Chain) (lite, key, path, bal bool) {
 			path = true
 		}
 	}
-	fmt.Printf("%2d: %-20s -> key(%s) bal(%s) lite(%s) path(%s)\n",
-		i, c.ChainID,
+	fmt.Printf("%-20s -> key(%s) bal(%s) lite(%s) path(%s)\n",
+		c.ChainID,
 		OkString(key), OkString(bal), OkString(lite), OkString(path))
 	return
 }
