@@ -131,8 +131,8 @@ func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
 }
 
 func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
-	fmt.Printf("ChainID: %s; ClientID: %s;\n",
-		c.ChainID, pth.Src.ClientID)
+	fmt.Printf("ChainID: %s; ClientID: %s; RPC: %s\n",
+		c.ChainID, pth.Src.ClientID, c.RPCAddr)
 	if c.ChainID != "gameofzoneshub-1a" {
 		if err = testnetRequest(c, c.Key); err != nil {
 			fmt.Println("request faucet error: " + err.Error())
