@@ -57,11 +57,11 @@ func startChainsCmd() *cobra.Command {
 		Use:     "start",
 		Aliases: []string{"auto"},
 		Short:   "auto check path",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			fmt.Println("bot running...")
 			path := args[0]
-			configChange := false
+			sec := args[1]
 			pth, err := config.Paths.Get(path)
 			if err != nil {
 				fmt.Println("check path error: " + err.Error())
@@ -81,9 +81,7 @@ func startChainsCmd() *cobra.Command {
 
 				chainCheck(c)
 			}
-			if configChange {
-				return overWriteConfig(cmd, config)
-			}
+
 			return nil
 		},
 	}
@@ -94,9 +92,11 @@ func startChainsCmd() *cobra.Command {
 func doCheck(c *relayer.Chain, pth *relayer.Path) (err error) {
 	fmt.Printf("ChainID: %s; ClientID: %s;\n",
 		c.ChainID, pth.Src.ClientID)
-	if err = testnetRequest(c, c.Key); err != nil {
-		fmt.Println("request faucet error: " + err.Error())
-		return
+	if c.ChainID != "gameofzoneshub-1a" {
+		if err = testnetRequest(c, c.Key); err != nil {
+			fmt.Println("request faucet error: " + err.Error())
+			return
+		}
 	}
 	if err = liteInit(c, c.Key); err != nil {
 		fmt.Println("lite init error: " + err.Error())
