@@ -131,6 +131,10 @@ func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
 
 		chainCheck(c)
 	}
+
+	var timer time.Time
+	timer = time.Now()
+	fmt.Printf("time in utc zone: %s\n", timer.UTC().String())
 }
 
 // Called to initialize the relayer.Chain types on Config
