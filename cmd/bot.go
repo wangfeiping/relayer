@@ -61,7 +61,9 @@ func startChainsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			fmt.Println("bot running...")
 			path := args[0]
-			sec := args[1]
+			sec := strconv.ParseInt(args[1], 10, 64)
+			t := time.NewTicker(time.Duration(sec) * time.Second)
+
 			pth, err := config.Paths.Get(path)
 			if err != nil {
 				fmt.Println("check path error: " + err.Error())
@@ -73,15 +75,24 @@ func startChainsCmd() *cobra.Command {
 				return
 			}
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
-			for _, c := range chains {
-				err = doCheck(c, pth)
-				if err != nil && c.ChainID == "gameofzoneshub-1a" {
-					fmt.Println("c.ChainID: " + c.ChainID)
+
+			go func() {
+				doCheck(chains, pth, path)
+				for {
+					select {
+					case <-t.C:
+						{
+							doCheck(chains, pth, path)
+						}
+					default:
+						{
+							time.Sleep(100 * time.Millisecond)
+						}
+					}
 				}
+			}()
 
-				chainCheck(c)
-			}
-
+			trapSignal(done)
 			return nil
 		},
 	}
@@ -89,7 +100,32 @@ func startChainsCmd() *cobra.Command {
 	return cmd
 }
 
-func doCheck(c *relayer.Chain, pth *relayer.Path) (err error) {
+func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
+	for _, c := range chains {
+		err = checking(c, pth)
+
+		if err != nil && c.ChainID == "gameofzoneshub-1a" {
+			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+				c.ChainID, path, pth.Dst.ClientID, err)
+			c.RPCAddr = "http://34.83.0.237:26657"
+			err = checking(c, pth)
+		}
+		if err != nil && c.ChainID == "gameofzoneshub-1a" {
+			fmt.Println("c.ChainID: " + c.ChainID)
+			c.RPCAddr = "http://34.83.218.4:26657"
+			err = checking(c, pth)
+		}
+		if err != nil && c.ChainID == "gameofzoneshub-1a" {
+			fmt.Println("c.ChainID: " + c.ChainID)
+			c.RPCAddr = "http://35.233.155.199:26657"
+			err = checking(c, pth)
+		}
+
+		chainCheck(c)
+	}
+}
+
+func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
 	fmt.Printf("ChainID: %s; ClientID: %s;\n",
 		c.ChainID, pth.Src.ClientID)
 	if c.ChainID != "gameofzoneshub-1a" {

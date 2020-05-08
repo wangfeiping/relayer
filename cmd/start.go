@@ -44,7 +44,7 @@ func startCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			done := func() { fmt.Println("bye") }
 			trapSignal(done)
 			return nil
 		},
