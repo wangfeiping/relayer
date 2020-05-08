@@ -113,21 +113,39 @@ func doCheck(chains map[string]*relayer.Chain, pth *relayer.Path, path string) {
 			fmt.Printf("ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
 				c.ChainID, path, pth.Dst.ClientID, err)
 			c.RPCAddr = "http://34.83.0.237:26657"
+			reValidateConfig(c)
 			err = checking(c, pth)
 		}
 		if err != nil && c.ChainID == "gameofzoneshub-1a" {
 			fmt.Println("c.ChainID: " + c.ChainID)
 			c.RPCAddr = "http://34.83.218.4:26657"
+			reValidateConfig(c)
 			err = checking(c, pth)
 		}
 		if err != nil && c.ChainID == "gameofzoneshub-1a" {
 			fmt.Println("c.ChainID: " + c.ChainID)
 			c.RPCAddr = "http://35.233.155.199:26657"
+			reValidateConfig(c)
 			err = checking(c, pth)
 		}
 
 		chainCheck(c)
 	}
+}
+
+// Called to initialize the relayer.Chain types on Config
+// change RPC
+func reValidateConfig(c *relayer.Chain) error {
+	to, err := time.ParseDuration(config.Global.Timeout)
+	if err != nil {
+		return err
+	}
+
+	if err := c.Init(homePath, appCodec, cdc, to, debug); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
