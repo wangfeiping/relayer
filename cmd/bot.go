@@ -236,7 +236,29 @@ func updateClient(src, dst *relayer.Chain, clientID string) error {
 		return err
 	}
 
-	return sendAndPrint([]sdk.Msg{src.PathEnd.UpdateClient(dstHeader, src.MustGetAddress())}, src, nil)
+	// return sendAndPrint([]sdk.Msg{src.PathEnd.UpdateClient(dstHeader, src.MustGetAddress())}, src, nil)
+	return send([]sdk.Msg{src.PathEnd.UpdateClient(dstHeader, src.MustGetAddress())}, src)
+}
+
+// SendAndPrint sends a transaction and prints according to the passed args
+func send(txs []sdk.Msg, c *relayer.Chain) (err error) {
+	text, indent := false, false
+	// if c.debug {
+	// 	if err = c.Print(txs, text, indent); err != nil {
+	// 		return err
+	// 	}
+	// }
+	// SendAndPrint sends the transaction with printing options from the CLI
+	res, err := c.SendMsgs(txs)
+	if err != nil {
+		return err
+	}
+	if res.Height == 0 {
+		return fmt.Errorf("height=%d", res.Height)
+	}
+
+	return c.Print(res, text, indent)
+
 }
 
 func genKey(keyName string, chain *relayer.Chain) error {
