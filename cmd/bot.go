@@ -120,6 +120,13 @@ func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
 	if err != nil {
 		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
 			dst.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://47.74.39.90:27657"
+		reValidateConfig(dst)
+		err = checking(dst, pth)
+	}
+	if err != nil {
+		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, path, pth.Dst.ClientID, err)
 		dst.RPCAddr = "http://34.83.218.4:26657"
 		reValidateConfig(dst)
 		err = checking(dst, pth)
@@ -158,6 +165,13 @@ func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
 	if err != nil {
 		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
 			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
+		dst.RPCAddr = "http://47.74.39.90:27657"
+		reValidateConfig(dst)
+		err = updateClient(src, dst, pth.Src.ClientID)
+	}
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
 		dst.RPCAddr = "http://34.83.218.4:26657"
 		reValidateConfig(dst)
 		err = updateClient(src, dst, pth.Src.ClientID)
@@ -192,6 +206,13 @@ func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
 	}
 
 	err = updateClient(dst, src, pth.Dst.ClientID)
+	if err != nil {
+		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
+			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
+		dst.RPCAddr = "http://47.74.39.90:27657"
+		reValidateConfig(dst)
+		err = updateClient(dst, src, pth.Dst.ClientID)
+	}
 	if err != nil {
 		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
 			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
