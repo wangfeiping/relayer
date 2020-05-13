@@ -82,6 +82,9 @@ func startPathCheckingCmd() *cobra.Command {
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
 
 			RPCs := []string{
+				"35.233.155.199:26657",
+				"34.83.218.4:26657",
+				"34.83.90.172:26656",
 				"http://47.74.39.90:27657",
 				"http://47.103.79.28:36657"}
 			GozHubID := "gameofzoneshub-1a"
