@@ -171,7 +171,7 @@ func queryClient(c *relayer.Chain, clientID string) (err error) {
 	// fmt.Printf("query client: %s", string(out))
 	dates := clientTimeRegexp.FindStringSubmatch(string(out))
 	if len(dates) > 1 {
-		exporter.SetStatusCode(1, dates[1], clientID)
+		exporter.SetStatusCode(1, dates[1], c.ChainID)
 	}
 	return nil
 }
