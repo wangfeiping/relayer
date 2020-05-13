@@ -13,7 +13,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/iqlusioninc/relayer/exporter"
 	"github.com/iqlusioninc/relayer/relayer"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 )
 
@@ -55,18 +58,31 @@ func genKeysCmd() *cobra.Command {
 
 func startPathCheckingCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "start",
+		Use:     "start [path_name] [duration_seconds] [metrics_port]",
 		Aliases: []string{"auto"},
 		Short:   "auto check path",
-		Args:    cobra.ExactArgs(2),
+		Args:    cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			fmt.Println("bot running...")
+
 			path := args[0]
 			sec, err := strconv.ParseInt(args[1], 10, 64)
 			if err != nil {
 				fmt.Println("parse sec error: " + err.Error())
 				return
 			}
+
+			prometheus.MustRegister(exporter.Collector())
+
+			http.Handle("/metrics", promhttp.Handler())
+			listen := args[2]
+			err = http.ListenAndServe(listen, nil)
+			if err != nil {
+				fmt.Printf("start exporter error: %v\n", err)
+				return
+			}
+			fmt.Printf("exporter started\n")
+
 			t := time.NewTicker(time.Duration(sec) * time.Second)
 
 			pth, err := config.Paths.Get(path)

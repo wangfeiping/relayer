@@ -3,6 +3,7 @@ module github.com/iqlusioninc/relayer
 go 1.14
 
 require (
+	github.com/prometheus/client_golang v1.6.0
 	github.com/CosmicCompass/post-chain v0.0.0-20200425063042-f936180f841c
 	github.com/Workiva/go-datastructures v1.0.52
 	github.com/avast/retry-go v2.6.0+incompatible
