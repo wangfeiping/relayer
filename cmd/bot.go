@@ -23,7 +23,7 @@ func botCmd() *cobra.Command {
 		Aliases: []string{"b"},
 		Short:   "auto running"}
 
-	cmd.AddCommand(startChainsCmd())
+	cmd.AddCommand(startPathCheckingCmd())
 	cmd.AddCommand(genKeysCmd())
 	return cmd
 }
@@ -53,7 +53,7 @@ func genKeysCmd() *cobra.Command {
 	return cmd
 }
 
-func startChainsCmd() *cobra.Command {
+func startPathCheckingCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "start",
 		Aliases: []string{"auto"},
@@ -81,15 +81,21 @@ func startChainsCmd() *cobra.Command {
 			}
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
 
+			RPCs := []string{
+				"http://47.74.39.90:27657",
+				"http://47.103.79.28:36657"}
+			GozHubID := "gameofzoneshub-1a"
 			go func() {
 				srcChain := chains[src]
 				dstChain := chains[dst]
-				doCheck(srcChain, dstChain, pth, path)
+				doCheck(srcChain, dstChain, pth, path,
+					RPCs, GozHubID)
 				for {
 					select {
 					case <-t.C:
 						{
-							doCheck(srcChain, dstChain, pth, path)
+							doCheck(srcChain, dstChain, pth, path,
+								RPCs, GozHubID)
 						}
 					default:
 						{
@@ -108,60 +114,13 @@ func startChainsCmd() *cobra.Command {
 	return cmd
 }
 
-func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
-	err := checking(src, pth)
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, path, pth.Dst.ClientID, err)
-	}
-	chainCheck(src)
+func doCheck(src, dst *relayer.Chain,
+	pth *relayer.Path, path string,
+	rpcs []string, GozHubID string) {
+	checking(src, rpcs, GozHubID)
+	checking(dst, rpcs, GozHubID)
 
-	err = checking(dst, pth)
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://47.74.39.90:27657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://34.83.218.4:26657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://34.83.0.237:26657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://35.233.155.199:26657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://51.15.78.44:26657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	if err != nil {
-		fmt.Printf("checking ChainID: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://54.179.169.235:26657"
-		reValidateConfig(dst)
-		err = checking(dst, pth)
-	}
-	chainCheck(dst)
-
-	err = updateClient(src, dst, pth.Src.ClientID)
+	err := updateClient(src, dst, pth.Src.ClientID)
 	if err != nil {
 		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
 			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
@@ -253,6 +212,29 @@ func doCheck(src, dst *relayer.Chain, pth *relayer.Path, path string) {
 	fmt.Printf("time in utc zone: %s\n", timer.UTC().String())
 }
 
+func checking(c *relayer.Chain, rpcs []string, GozHubID string) {
+	i := 0
+	err := checkingLite(c, GozHubID)
+	for err != nil {
+		time.Sleep(time.Duration(10) * time.Second)
+		fmt.Println("re-try checking...")
+		if c.ChainID == GozHubID {
+			c.RPCAddr = getRpc(rpcs, i)
+			reValidateConfig(c)
+			err = checkingLite(c, GozHubID)
+			i++
+		} else {
+			err = checkingLite(c, GozHubID)
+		}
+	}
+	chainStatus(c)
+}
+
+func getRpc(rpcs []string, i int) string {
+	l := len(rpcs)
+	return rpcs[i%l]
+}
+
 // Called to initialize the relayer.Chain types on Config
 // change RPC
 func reValidateConfig(c *relayer.Chain) error {
@@ -268,23 +250,25 @@ func reValidateConfig(c *relayer.Chain) error {
 	return nil
 }
 
-func checking(c *relayer.Chain, pth *relayer.Path) (err error) {
-	fmt.Printf("checking ChainID: %s; ClientID: %s; RPC: %s\n",
-		c.ChainID, pth.Src.ClientID, c.RPCAddr)
-	if c.ChainID != "gameofzoneshub-1a" {
+func checkingLite(c *relayer.Chain,
+	GozHubID string) (err error) {
+	fmt.Printf("checking %s; RPC: %s\n",
+		c.ChainID, c.RPCAddr)
+	if c.ChainID != GozHubID {
 		if err = testnetRequest(c, c.Key); err != nil {
-			fmt.Println("request faucet error: " + err.Error())
+			fmt.Printf("request faucet %s; RPC: %s; error: %v\n",
+				c.ChainID, c.RPCAddr, err)
 			return
 		}
 	}
 	if err = liteInit(c, c.Key); err != nil {
-		fmt.Println("lite init error: " + err.Error())
+		fmt.Printf("lite init %s; RPC: %s; error: %v\n",
+			c.ChainID, c.RPCAddr, err)
 		return
 	}
 	// err = txLink(path)
 
-	fmt.Printf("checked ChainID: %s; ClientID: %s; RPC: %s\n",
-		c.ChainID, pth.Src.ClientID, c.RPCAddr)
+	fmt.Printf("checked %s; RPC: %s\n", c.ChainID, c.RPCAddr)
 	return
 }
 
@@ -740,7 +724,7 @@ func initKey(chain *relayer.Chain, keyName, mnem string) (err error) {
 	return
 }
 
-func chainCheck(c *relayer.Chain) (lite, key, path, bal bool) {
+func chainStatus(c *relayer.Chain) (lite, key, path, bal bool) {
 	_, err := c.GetAddress()
 	if err == nil {
 		key = true
