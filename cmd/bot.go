@@ -117,6 +117,8 @@ func startPathCheckingCmd() *cobra.Command {
 			if len(dates) > 1 {
 				exporter.SetStatusCode(1, dates[1], pth.Src.ChainID)
 			}
+			exporter.SetStatusCode(1, time.Now().UTC().String(), "test")
+
 			RPCs := []string{
 				"35.233.155.199:26657",
 				"http://34.83.218.4:26657",
