@@ -94,31 +94,6 @@ func startPathCheckingCmd() *cobra.Command {
 			dstChain := chains[dst]
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
 
-			if err = srcChain.AddPath(pth.Src.ClientID,
-				dcon, dcha, dpor, dord); err != nil {
-				fmt.Println("query client: %s %s; error: %v\n",
-					pth.Src.ChainID, pth.Src.ClientID, err)
-				return err
-			}
-			res, err := srcChain.QueryClientState()
-			if err != nil {
-				fmt.Println("query client: %s %s; error: %v\n",
-					pth.Src.ChainID, pth.Src.ClientID, err)
-				return err
-			}
-			out, err := srcChain.Amino.MarshalJSON(res)
-			if err != nil {
-				fmt.Println("query client: %s %s; error: %v\n",
-					pth.Src.ChainID, pth.Src.ClientID, err)
-				return err
-			}
-			// fmt.Printf("query client: %s", string(out))
-			dates := clientTimeRegexp.FindStringSubmatch(string(out))
-			if len(dates) > 1 {
-				exporter.SetStatusCode(1, dates[1], pth.Src.ChainID)
-			}
-			exporter.SetStatusCode(1, time.Now().UTC().String(), "test")
-
 			RPCs := []string{
 				"35.233.155.199:26657",
 				"http://34.83.218.4:26657",
@@ -126,6 +101,27 @@ func startPathCheckingCmd() *cobra.Command {
 				"http://47.74.39.90:27657",
 				"http://47.103.79.28:36657"}
 			GozHubID := "gameofzoneshub-1a"
+
+			go func() {
+				tq := time.NewTicker(time.Duration(60) * time.Second)
+				for {
+					select {
+					case <-tq.C:
+						{
+							queryClient(srcChain, pth.Src.ClientID)
+							queryClient(dstChain, pth.Dst.ClientID)
+							exporter.SetStatusCode(
+								1, time.Now().UTC().String(), "test")
+							fmt.Println("query client done")
+						}
+					default:
+						{
+							time.Sleep(100 * time.Millisecond)
+						}
+					}
+				}
+			}()
+
 			go func() {
 				doCheck(srcChain, dstChain, pth, path,
 					RPCs, GozHubID)
@@ -151,6 +147,33 @@ func startPathCheckingCmd() *cobra.Command {
 	}
 
 	return cmd
+}
+
+func queryClient(c *relayer.Chain, clientID string) (err error) {
+	if err = c.AddPath(clientID,
+		dcon, dcha, dpor, dord); err != nil {
+		fmt.Println("query client: %s %s; error: %v\n",
+			c.ChainID, clientID, err)
+		return err
+	}
+	res, err := c.QueryClientState()
+	if err != nil {
+		fmt.Println("query client: %s %s; error: %v\n",
+			c.ChainID, clientID, err)
+		return err
+	}
+	out, err := c.Amino.MarshalJSON(res)
+	if err != nil {
+		fmt.Println("query client: %s %s; error: %v\n",
+			c.ChainID, clientID, err)
+		return err
+	}
+	// fmt.Printf("query client: %s", string(out))
+	dates := clientTimeRegexp.FindStringSubmatch(string(out))
+	if len(dates) > 1 {
+		exporter.SetStatusCode(1, dates[1], clientID)
+	}
+	return nil
 }
 
 func startExporter(listen string) {
