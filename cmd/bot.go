@@ -120,96 +120,40 @@ func doCheck(src, dst *relayer.Chain,
 	checking(src, rpcs, GozHubID)
 	checking(dst, rpcs, GozHubID)
 
-	err := updateClient(src, dst, pth.Src.ClientID)
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://47.74.39.90:27657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://34.83.218.4:26657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://34.83.0.237:26657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://35.233.155.199:26657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://51.15.78.44:26657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			src.ChainID, dst.ChainID, path, pth.Src.ClientID, err)
-		dst.RPCAddr = "http://54.179.169.235:26657"
-		reValidateConfig(dst)
-		err = updateClient(src, dst, pth.Src.ClientID)
-	}
+	updating(src, dst, path, pth.Src.ClientID, rpcs, GozHubID)
+	updating(dst, src, path, pth.Dst.ClientID, rpcs, GozHubID)
 
-	err = updateClient(dst, src, pth.Dst.ClientID)
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://47.74.39.90:27657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://34.83.218.4:26657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://34.83.0.237:26657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://35.233.155.199:26657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://51.15.78.44:26657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
-	if err != nil {
-		fmt.Printf("update client: src: %s; dst: %s; Path: %s; ClientID: %s; error: %v\n",
-			dst.ChainID, src.ChainID, path, pth.Dst.ClientID, err)
-		dst.RPCAddr = "http://54.179.169.235:26657"
-		reValidateConfig(dst)
-		err = updateClient(dst, src, pth.Dst.ClientID)
-	}
 	var timer time.Time
 	timer = time.Now()
-	fmt.Printf("time in utc zone: %s\n", timer.UTC().String())
+	fmt.Printf("All done. time(utc): %s\n", timer.UTC().String())
+}
+
+func updating(src, dst *relayer.Chain,
+	path string, clientID string,
+	rpcs []string, GozHubID string) {
+	fmt.Printf("client updating: src: %s; dst: %s; %s %s\n",
+		src.ChainID, dst.ChainID,
+		path, clientID)
+	i := 0
+	err := updateClient(src, dst, clientID)
+	for err != nil {
+		time.Sleep(time.Duration(10) * time.Second)
+		fmt.Println("re-try update client...")
+		if src.ChainID == GozHubID {
+			fmt.Printf("[ERR] client update: src: %s; dst: %s; %s %s; error: %v\n",
+				src.ChainID, dst.ChainID,
+				path, clientID, err)
+			src.RPCAddr = getRpc(rpcs, i)
+			reValidateConfig(src)
+			err = updateClient(src, dst, clientID)
+			i++
+		} else {
+			err = updateClient(src, dst, clientID)
+		}
+	}
+	fmt.Printf("client updated: src: %s; dst: %s; %s %s\n",
+		src.ChainID, dst.ChainID,
+		path, clientID)
 }
 
 func checking(c *relayer.Chain, rpcs []string, GozHubID string) {
@@ -240,10 +184,14 @@ func getRpc(rpcs []string, i int) string {
 func reValidateConfig(c *relayer.Chain) error {
 	to, err := time.ParseDuration(config.Global.Timeout)
 	if err != nil {
+		fmt.Printf("[ERR] re-validate config %s; RPC: %s; error: %v\n",
+			c.ChainID, c.RPCAddr, err)
 		return err
 	}
 
 	if err := c.Init(homePath, appCodec, cdc, to, debug); err != nil {
+		fmt.Printf("[ERR] re-validate config %s; RPC: %s; error: %v\n",
+			c.ChainID, c.RPCAddr, err)
 		return err
 	}
 
@@ -252,23 +200,23 @@ func reValidateConfig(c *relayer.Chain) error {
 
 func checkingLite(c *relayer.Chain,
 	GozHubID string) (err error) {
-	fmt.Printf("checking %s; RPC: %s\n",
+	fmt.Printf("lite checking %s; RPC: %s\n",
 		c.ChainID, c.RPCAddr)
 	if c.ChainID != GozHubID {
 		if err = testnetRequest(c, c.Key); err != nil {
-			fmt.Printf("request faucet %s; RPC: %s; error: %v\n",
+			fmt.Printf("[ERR] request faucet %s; RPC: %s; error: %v\n",
 				c.ChainID, c.RPCAddr, err)
 			return
 		}
 	}
 	if err = liteInit(c, c.Key); err != nil {
-		fmt.Printf("lite init %s; RPC: %s; error: %v\n",
+		fmt.Printf("[ERR] lite init %s; RPC: %s; error: %v\n",
 			c.ChainID, c.RPCAddr, err)
 		return
 	}
 	// err = txLink(path)
 
-	fmt.Printf("checked %s; RPC: %s\n", c.ChainID, c.RPCAddr)
+	fmt.Printf("lite checked %s; RPC: %s\n", c.ChainID, c.RPCAddr)
 	return
 }
 
