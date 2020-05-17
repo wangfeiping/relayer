@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -197,11 +198,22 @@ func doCheck(src, dst *relayer.Chain,
 	checking(src, rpcs, GozHubID)
 	checking(dst, rpcs, GozHubID)
 
-	fmt.Printf("updating(src, dst)... time(utc): %s\n", time.Now().UTC().String())
-	updating(src, dst, path, pth.Src.ClientID, rpcs, GozHubID)
-	fmt.Printf("updating(dst, src)... time(utc): %s\n", time.Now().UTC().String())
-	updating(dst, src, path, pth.Dst.ClientID, rpcs, GozHubID)
-
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		fmt.Printf("updating(src, dst)... time(utc): %s\n", time.Now().UTC().String())
+		updating(src, dst, path, pth.Src.ClientID, rpcs, GozHubID)
+		fmt.Printf("updated(src, dst). time(utc): %s\n", time.Now().UTC().String())
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		fmt.Printf("updating(dst, src)... time(utc): %s\n", time.Now().UTC().String())
+		updating(dst, src, path, pth.Dst.ClientID, rpcs, GozHubID)
+		fmt.Printf("updated(dst, src). time(utc): %s\n", time.Now().UTC().String())
+		wg.Done()
+	}()
+	wg.Wait()
 	fmt.Printf("All done. time(utc): %s\n", time.Now().UTC().String())
 }
 
@@ -214,7 +226,7 @@ func updating(src, dst *relayer.Chain,
 	i := 0
 	err := updateClient(src, dst, clientID)
 	for err != nil {
-		time.Sleep(time.Duration(10) * time.Second)
+		time.Sleep(time.Duration(100) * time.Millisecond)
 		fmt.Println("re-try update client...")
 		if src.ChainID == GozHubID {
 			fmt.Printf("[ERR] client update: src: %s; dst: %s; %s %s; error: %v\n",
