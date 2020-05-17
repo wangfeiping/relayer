@@ -74,8 +74,9 @@ func startPathCheckingCmd() *cobra.Command {
 				fmt.Println("parse sec error: " + err.Error())
 				return
 			}
+			listen := args[2]
 
-			startExporter(args[2])
+			startExporter(listen)
 			fmt.Printf("exporter started\n")
 
 			t := time.NewTicker(time.Duration(sec) * time.Second)
@@ -152,19 +153,19 @@ func startPathCheckingCmd() *cobra.Command {
 func queryClient(c *relayer.Chain, clientID string) (err error) {
 	if err = c.AddPath(clientID,
 		dcon, dcha, dpor, dord); err != nil {
-		fmt.Println("query client: %s %s; error: %v\n",
+		fmt.Printf("[ERR] query client: %s %s; error: %v\n",
 			c.ChainID, clientID, err)
 		return err
 	}
 	res, err := c.QueryClientState()
 	if err != nil {
-		fmt.Println("query client: %s %s; error: %v\n",
+		fmt.Printf("[ERR] query client: %s %s; error: %v\n",
 			c.ChainID, clientID, err)
 		return err
 	}
 	out, err := c.Amino.MarshalJSON(res)
 	if err != nil {
-		fmt.Println("query client: %s %s; error: %v\n",
+		fmt.Printf("[ERR] query client: %s %s; error: %v\n",
 			c.ChainID, clientID, err)
 		return err
 	}
@@ -183,9 +184,8 @@ func startExporter(listen string) {
 		http.Handle("/metrics", promhttp.Handler())
 		err := http.ListenAndServe(listen, nil)
 		if err != nil {
-			fmt.Printf("start exporter error: %v\n", err)
+			fmt.Printf("[ERR] start exporter error: %v\n", err)
 			panic(err)
-			return
 		}
 	}()
 	return
