@@ -14,9 +14,9 @@ import (
 	sdkCtx "github.com/cosmos/cosmos-sdk/client/context"
 	ckeys "github.com/cosmos/cosmos-sdk/client/keys"
 	aminocodec "github.com/cosmos/cosmos-sdk/codec"
-	codecstd "github.com/cosmos/cosmos-sdk/codec/std"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	keys "github.com/cosmos/cosmos-sdk/crypto/keyring"
+	codecstd "github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/go-bip39"
@@ -163,17 +163,12 @@ func defaultChainLogger() log.Logger {
 
 // KeyExists returns true if there is a specified key in chain's keybase
 func (src *Chain) KeyExists(name string) bool {
-	keyInfos, err := src.Keybase.List()
+	k, err := src.Keybase.Key(name)
 	if err != nil {
 		return false
 	}
 
-	for _, k := range keyInfos {
-		if k.GetName() == name {
-			return true
-		}
-	}
-	return false
+	return k.GetName() == name
 }
 
 func (src *Chain) getGasPrices() sdk.DecCoins {
