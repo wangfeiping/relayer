@@ -111,8 +111,8 @@ func startPathCheckingCmd() *cobra.Command {
 						{
 							queryClient(srcChain, pth.Src.ClientID)
 							queryClient(dstChain, pth.Dst.ClientID)
-							exporter.SetStatusCode(
-								1, time.Now().UTC().String(), "test")
+							// exporter.SetStatusCode(
+							// 	1, time.Now().UTC().String(), "test")
 							fmt.Println("query client done")
 						}
 					default:
