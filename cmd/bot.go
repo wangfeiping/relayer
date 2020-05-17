@@ -197,12 +197,12 @@ func doCheck(src, dst *relayer.Chain,
 	checking(src, rpcs, GozHubID)
 	checking(dst, rpcs, GozHubID)
 
+	fmt.Printf("updating(src, dst)... time(utc): %s\n", time.Now().UTC().String())
 	updating(src, dst, path, pth.Src.ClientID, rpcs, GozHubID)
+	fmt.Printf("updating(dst, src)... time(utc): %s\n", time.Now().UTC().String())
 	updating(dst, src, path, pth.Dst.ClientID, rpcs, GozHubID)
 
-	var timer time.Time
-	timer = time.Now()
-	fmt.Printf("All done. time(utc): %s\n", timer.UTC().String())
+	fmt.Printf("All done. time(utc): %s\n", time.Now().UTC().String())
 }
 
 func updating(src, dst *relayer.Chain,
