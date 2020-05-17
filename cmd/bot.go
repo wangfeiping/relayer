@@ -233,11 +233,16 @@ func updating(src, dst *relayer.Chain,
 		fmt.Println("re-try update client...")
 		if src.ChainID == GozHubID {
 			src.RPCAddr = getRpc(rpcs, i)
-			reValidateConfig(src)
-			err = updateClient(src, dst, clientID)
+			err = reValidateConfig(src)
+			if err == nil {
+				err = updateClient(src, dst, clientID)
+			}
 			i++
 		} else {
-			err = updateClient(src, dst, clientID)
+			err = reValidateConfig(src)
+			if err == nil {
+				err = updateClient(src, dst, clientID)
+			}
 		}
 	}
 	fmt.Printf("client updated: src: %s; dst: %s; %s %s\n",
