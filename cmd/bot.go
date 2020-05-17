@@ -61,10 +61,10 @@ func genKeysCmd() *cobra.Command {
 
 func startPathCheckingCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "start [path_name] [duration_seconds] [metrics_port]",
+		Use:     "start [path_name] [duration_seconds] [metrics_port] [target_chain_id] [http://rpc1:port1,http://rpc2:port2,...]",
 		Aliases: []string{"auto"},
 		Short:   "auto check path",
-		Args:    cobra.ExactArgs(3),
+		Args:    cobra.ExactArgs(5),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			fmt.Println("bot running...")
 
@@ -95,13 +95,13 @@ func startPathCheckingCmd() *cobra.Command {
 			dstChain := chains[dst]
 			fmt.Printf("src: %s; dst: %s\n", src, dst)
 
+			GozHubID := args[3]
 			RPCs := []string{
 				"35.233.155.199:26657",
 				"http://34.83.218.4:26657",
 				"http://34.83.90.172:26656",
 				"http://47.74.39.90:27657",
 				"http://47.103.79.28:36657"}
-			GozHubID := "gameofzoneshub-1a"
 
 			go func() {
 				tq := time.NewTicker(time.Duration(60) * time.Second)
