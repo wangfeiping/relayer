@@ -303,7 +303,7 @@ func checkingLite(c *relayer.Chain,
 		if err = testnetRequest(c, c.Key); err != nil {
 			fmt.Printf("[ERR] request faucet %s; RPC: %s; error: %v\n",
 				c.ChainID, c.RPCAddr, err)
-			return
+			// return
 		}
 	}
 	if err = liteInit(c, c.Key); err != nil {
