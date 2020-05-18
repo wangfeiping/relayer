@@ -346,6 +346,7 @@ func send(txs []sdk.Msg, c *relayer.Chain) (err error) {
 		return err
 	}
 	if res.Height == 0 {
+		c.Print(res, text, indent)
 		return fmt.Errorf("height=%d", res.Height)
 	}
 
