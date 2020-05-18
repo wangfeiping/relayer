@@ -277,6 +277,8 @@ func getRpc(rpcs []string, i int) string {
 // Called to initialize the relayer.Chain types on Config
 // change RPC
 func reValidateConfig(c *relayer.Chain) error {
+	fmt.Printf("re-validating config %s; RPC: %s\n",
+		c.ChainID, c.RPCAddr)
 	to, err := time.ParseDuration(config.Global.Timeout)
 	if err != nil {
 		fmt.Printf("[ERR] re-validate config %s; RPC: %s; error: %v\n",
